@@ -14,7 +14,8 @@ p_load("dplyr", "terra", "ggplot2", "data.table", "tidyterra", "geobr",
        "red", "rnaturalearth", "rnaturalearthdata", "wdpar", "pals", "scales",
        "tidyr", "betapart", "parallel", "bamm", "tidyterra", "metR", "ggspatial",
        "stringr", "CoordinateCleaner", "spThin", "rpaleoclim", "fs", "remotes",
-       "ape", "factoextra", "rgl")
+       "ape", "factoextra", "rgl", "ggcorrplot", "spatstat", "spatialEco",
+       "MetBrewer", "patchwork", "ggpubr", "spThin")
 
 # Se não aparecer nada, significa que todos os pacotes estão instalados!
 

@@ -2,9 +2,9 @@
 # Vamos finalizar a filtragem dos pontos usando o pacote CoordinateCleaner:
 # https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13152
 
-# "CoordinateCleaner compares the coordinates of occurrence records to reference 
-# databases of country and province centroids, country capitals, urban areas, 
-# known natural ranges and tests for plain zeros, equal longitude/latitude, 
+# "CoordinateCleaner compares the coordinates of occurrence records to reference
+# databases of country and province centroids, country capitals, urban areas,
+# known natural ranges and tests for plain zeros, equal longitude/latitude,
 # coordinates at sea, country borders and outliers in collection year"
 
 
@@ -21,7 +21,7 @@ sp <- "Araucaria angustifolia"
 sp_dir <- file.path("Ocorrencias/", sp)
 sp_dir
 
-# Importar registros 
+# Importar registros
 occ <- fread(file.path(sp_dir, "Ocorrencias_filtered.gz"),
              data.table = FALSE)
 #Espacializar pontos
@@ -33,7 +33,8 @@ mapview(pts, #Converte pontos para spatvector
 
 # Pontos em centróides de países
 cap <- cc_cap(occ, lon = "decimalLongitude", lat = "decimalLatitude",
-              species = "scientificName", buffer = 1000, #Buffer do centroide em metros
+              species = "scientificName",
+              buffer = 1000, #Buffer do centroide em metros
               value = "flagged")
 sum(!cap) #Numero de registros sinalizados
 #Função para salvar registros se houver sinalizações
@@ -102,14 +103,15 @@ if(sum(!gbif) > 0){ #Se algum registro for sinalizado...
 #Pontos em instituições de biodiversidade (jardins botanicos, herbarios, museus, etc)
 #Antes, vamos ver a localização dessas instituições
 bio_inst <- vect(institutions[!is.na(institutions$decimalLongitude) & #Mapa de referencia do CoordinateCleaner
-                                !is.na(institutions$decimalLatitude), ], 
+                                !is.na(institutions$decimalLatitude), ],
                  geom = c(x = "decimalLongitude", y = "decimalLatitude"),
                  crs = "+proj=longlat +datum=WGS84 +no_defs")
 mapview(bio_inst)
-#Testar se pontos caem nas instituições         
+#Testar se pontos caem nas instituições
 inst <- cc_inst(occ, lon = "decimalLongitude",
                 lat = "decimalLatitude",
                 species = "scientificName",
+                buffer = 1000, #A 1km de distancia
                 value = "flagged")
 sum(!inst) #Numero de registros sinalizados
 #Função para salvar registros se houver sinalizações
@@ -118,8 +120,8 @@ if(sum(!inst) > 0){ #Se algum registro for sinalizado...
   occ_inst_removed <- occ[!inst,]
   #Ver mapa
   pts_inst_removed <- vect(occ_inst_removed, #Converte pontos para spatvector
-                           geom = c(x = "decimalLongitude", 
-                                    y = "decimalLatitude"), 
+                           geom = c(x = "decimalLongitude",
+                                    y = "decimalLatitude"),
                            crs = "+init=epsg:4326")
   mapview(bio_inst) + mapview(pts_inst_removed, col.regions = "yellow")
   #Manter apenas ocorrências que passaram no teste
@@ -156,7 +158,7 @@ occ <- occ_unique
 
 # Filtrar por outliers geográficos
 # Cuidado: outliers são mesmo outliers? Ou é apenas uma distribuição disjunta?
-# If “quantile”: a boxplot method is used and records are flagged as outliers 
+# If “quantile”: a boxplot method is used and records are flagged as outliers
 # if their mean distance to all other records of the same species is larger than
 # mltpl * the interquartile range of the mean distance of all records of this species. I
 ?cc_outl
@@ -172,8 +174,8 @@ outl <- cc_outl(x = occ,
 sum(!outl)
 #Ver pontos marcados como outliers
 pts_outl <- vect(occ, #Converte pontos para spatvector
-                 geom = c(x = "decimalLongitude", 
-                          y = "decimalLatitude"), 
+                 geom = c(x = "decimalLongitude",
+                          y = "decimalLatitude"),
                          crs = "+init=epsg:4326")
 #Adicionar info de outliers
 pts_outl$outlier <- outl
