@@ -22,14 +22,80 @@ sp_dir <- file.path("Ocorrencias/", sp)
 sp_dir
 
 # Importar registros
-occ <- fread(file.path(sp_dir, "Ocorrencias_filtered.gz"),
+occ <- fread(file.path(sp_dir, "2-Ocorrencias_especialistas.gz"),
              data.table = FALSE)
 #Espacializar pontos
 pts <- vect(occ, geom = c(x = "decimalLongitude", #Converte pontos para spatvector
                           y = "decimalLatitude"), crs = "+init=epsg:4326")
-mapview(pts, #Converte pontos para spatvector
-        zcol = "data_source", #Coluna usada para colorir
-        burst = TRUE) #Filtrar por valor da coluna
+mapview(pts,
+        zcol = "year") #Coluna usada para colorir
+
+# Vamos usar algumas informações dos metadados para remover pontos duvidosos #
+# Vamos remover os pontos sem ano muito antigos (Antes de 1980)
+antigos <- which(occ$year < 1980 #Identificar quais pontos foram registradoa antes de 1980
+                      | is.na(occ$year)) #Ou que estão sem info de ano
+antigos #index (numero da linha) de registros antigos
+mapview(pts[antigos,], zcol = "year")
+
+# Vamos salvar os IDS dos registros removidos
+arquivo_original <- file.path(sp_dir, "2-Ocorrencias_especialistas.gz")
+id_antigos <- occ[antigos, "ID"]
+removidos <- list("arquivo_original" = arquivo_original,
+                  "removidos_antigos_1980" = id_antigos)
+
+#Vamos remover esses pontos do nosso dataframe
+occ <- occ[-antigos, ]
+pts <- pts[-antigos, ]
+
+# As colunsa occurrenceRemarks e locality também oferecem algumas informações uteis
+# Por exemplo, de individuos cultivados/plantados
+cultivados_remarks <- grep("cultiv|plantad", occ$occurrenceRemarks) #Em occurrenceRemarks
+cultivados_locality <- grep("cultiv|plantad", occ$locality) #Em locality
+# Unir index de cultivados de acordo com occurrenceRemarks e locality
+cultivados <- c(cultivados_remarks, cultivados_locality) %>% unique()
+#Ver informações
+occ$occurrenceRemarks[cultivados] %>% unique() #Ver informações
+occ$locality[cultivados_locality] %>% unique()
+# Ver mapa
+mapview(pts[cultivados, ], label = "occurrenceRemarks")
+
+# Vamos adicionar os IDs desses registros removidos
+removidos[["cultivados"]] <- occ$ID[cultivados]
+removidos
+
+# Vamos remover cultivados
+occ <- occ[-cultivados, ]
+pts <- pts[-cultivados, ]
+
+# Alguns individuos também podem estar em herbários ou universidades
+instituicoes_biod_remarks <- grep("herb|Herb|univ|Univ", occ$occurrenceRemarks)
+instituicoes_biod_locality <- grep("herb|Herb|univ|Univ", occ$locality)
+# Unir dados
+instituicoes_biod <- c(instituicoes_biod_remarks,
+                       instituicoes_biod_locality) %>% unique()
+# Ver informações
+occ$occurrenceRemarks[instituicoes_biod_remarks] %>% unique()
+occ$occurrenceRemarks[instituicoes_biod_locality] %>% unique()
+#Plotar
+mapview(pts[instituicoes_biod, ], label = "occurrenceRemarks")
+
+# Vamos adicionar os IDs desses registros removidos
+removidos[["herbarios_universidades"]] <- occ$ID[instituicoes_biod]
+removidos
+
+
+# Remover pontos em instituicoes
+occ <- occ[-instituicoes_biod, ]
+pts <- pts[-instituicoes_biod, ]
+mapview(pts)
+
+# E os pontos do inaturalist?
+inat <- grep("iNat", occ$datasetName)
+mapview(pts[inat, ])
+# Deixar ou não?
+
+# O pacote CoordinateCleaner oferece algumas opções para filtrar registros automaticamente
+# https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13152
 
 # Pontos em centróides de países
 cap <- cc_cap(occ, lon = "decimalLongitude", lat = "decimalLatitude",
@@ -37,11 +103,15 @@ cap <- cc_cap(occ, lon = "decimalLongitude", lat = "decimalLatitude",
               buffer = 1000, #Buffer do centroide em metros
               value = "flagged")
 sum(!cap) #Numero de registros sinalizados
+
 #Função para salvar registros se houver sinalizações
 if(sum(!cap) > 0){ #Se algum registro for sinalizado...
+  # Salvar index removidos
+  removidos[["centroides_paises"]] <- occ$ID[!cap]
+
   #Manter apenas ocorrências que passaram no teste
   occ <- occ[cap,]
-    }
+  }
 
 # Pontos em centróides de Estados do Brasil
 br <- geobr::read_state() %>% vect() #Obter mapa do brasil
@@ -54,8 +124,11 @@ pts <- vect(occ, geom = c(x = "decimalLongitude", #Converte pontos para spatvect
                           y = "decimalLatitude"), crs = "+init=epsg:4326")
 cen <- !is.related(pts, br_cen_b, "intersects") #Se não cai dentro, é TRUE (passou no teste)
 sum(!cen) #Numero de registros sinalizados
+
 #Função para salvar registros se houver sinalizações
 if(sum(!cen) > 0){ #Se algum registro for sinalizado...
+  # Salvar index removidos
+  removidos[["centroides_estados"]] <- occ$ID[!cen]
   #Manter apenas ocorrências que passaram no teste
   occ <- occ[cen,]
 }
@@ -68,6 +141,8 @@ equ <- cc_equ(occ, lon = "decimalLongitude",
 sum(!equ) #Numero de registros sinalizados
 #Função para salvar registros se houver sinalizações
 if(sum(!equ) > 0){ #Se algum registro for sinalizado...
+  # Salvar index removidos
+  removidos[["long_lat_iguais"]] <- occ$ID[!equ]
   #Manter apenas ocorrências que passaram no teste
   occ <- occ[equ,]
 }
@@ -96,6 +171,8 @@ gbif <- cc_gbif(occ, lon = "decimalLongitude",
 sum(!gbif) #Numero de registros sinalizados
 #Função para salvar registros se houver sinalizações
 if(sum(!gbif) > 0){ #Se algum registro for sinalizado...
+  # Salvar index removidos
+  removidos[["sede_gbif"]] <- occ$ID[!gbif]
   #Manter apenas ocorrências que passaram no teste
   occ <- occ[gbif,]
 }
@@ -116,7 +193,9 @@ inst <- cc_inst(occ, lon = "decimalLongitude",
 sum(!inst) #Numero de registros sinalizados
 #Função para salvar registros se houver sinalizações
 if(sum(!inst) > 0){ #Se algum registro for sinalizado...
-  #Remover registros e salvar registros removidos
+  # Salvar index removidos
+  removidos[["instituicoes_biodiversidade"]] <- occ$ID[!inst]
+  #Remover registros
   occ_inst_removed <- occ[!inst,]
   #Ver mapa
   pts_inst_removed <- vect(occ_inst_removed, #Converte pontos para spatvector
@@ -129,8 +208,6 @@ if(sum(!inst) > 0){ #Se algum registro for sinalizado...
 }
 
 ### Remover duplicatas (apenas coordenadas)
-# Criar coluna para identificar e remover duplicatas
-occ$index <- row.names(occ)
 
 #Vamos escolher a ordem de preferência das bases de dados
 unique(occ$data_source)
@@ -142,10 +219,15 @@ occ_unique <- occ %>%
   arrange(match(data_source, preferred_order)) %>% #Definir ordem de preferencia de data_source
   filter(row_number() == 1) %>% #Remover duplicados
   ungroup()
+
 #Obter valores duplicados removidos
-dup_ind <- setdiff(occ$index, occ_unique$index)
-dup_ind
-occ_dup <- occ %>% filter(index %in% dup_ind)
+dup_id <- setdiff(occ$ID, occ_unique$ID)
+dup_id
+# Salvar index removidos por serem duplicados
+removidos[["duplicados"]] <- dup_id
+
+# Ver duplicados
+occ_dup <- occ %>% filter(ID %in% dup_id)
 pts_dup <- vect(occ_dup, geom = c(x = "decimalLongitude", #Converte pontos para spatvector
                                   y = "decimalLatitude"), crs = "+init=epsg:4326")
 #Checar pontos
@@ -184,13 +266,21 @@ mapview(pts_outl, zcol = "outlier")
 # Ponto é mesmo um outlier?
 # https://www.inaturalist.org/observations/252623928
 
-#Se optar por manter apenas ocorrências que passaram no teste...
-occ <- occ[outl,]
+# Por enquanto, vamos apenas deixar indicado que é um outlier geográfico
+occ$outlier <- outl #Criar coluna
+# Lembre que TRUE = não é outlier e FALSE = Outlier (não passou no teste)
+
+# Podemos também ver se é outlier no espaço ambiental...
+# Vamos ver mais a frente!
 
 #SALVAR CHECKPOINT
 fwrite(occ,
-       file.path(sp_dir, "Ocorrencias_cleaned.gz"),
+       file.path(sp_dir, "3-Ocorrencias_CoordinateCleaner.gz"),
        compress = "gzip", row.names = FALSE)
+# Salvar também os pontos removidos
+saveRDS(removidos,
+        file.path(sp_dir, "Removidos", "3-removidos_CoordinateCleaner.rds"))
+
 
 
 #Ver mapa final

@@ -99,7 +99,13 @@ ggsave("images/Geo_env_Ecorregioes.png",
 # Assim como vimos quais partes do espaço ambiental cada ecorregião ocupa, podemos ver quais partes do espaço ambiental disponível uma espécie ocupa
 
 # Importar registros de ocorrência
-occ <- fread("Ocorrencias/Araucaria angustifolia/Ocorrencias_cleaned.gz")
+#Como sempre, começamos atribuindo o nome da espécie e o diretório a objetos
+sp <- "Araucaria angustifolia"
+sp_dir <- file.path("Ocorrencias/", sp)
+sp_dir
+
+# Importar registros
+occ <- fread(file.path(sp_dir, "2-Ocorrencias_especialistas.gz"))
 
 # Espacializar e plotar
 pts <- vect(occ, geom = c(x = "decimalLongitude", y = "decimalLatitude"),

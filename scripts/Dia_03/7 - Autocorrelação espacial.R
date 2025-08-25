@@ -31,8 +31,14 @@ library(pbapply)
 # Importar função
 source("scripts/helpers/filter_geo_moran.R")
 
-# Importar ocorrências
-occ <- fread("Ocorrencias/Araucaria angustifolia/Ocorrencias_cleaned.gz")
+# Importar registros de ocorrência
+#Como sempre, começamos atribuindo o nome da espécie e o diretório a objetos
+sp <- "Araucaria angustifolia"
+sp_dir <- file.path("Ocorrencias/", sp)
+sp_dir
+
+# Importar registros
+occ <- fread(file.path(sp_dir, "4-Ocorrencias_sem_outliers.gz"))
 
 # Espacializar e plotar
 pts <- vect(occ, geom = c(x = "decimalLongitude", y = "decimalLatitude"),
@@ -83,8 +89,8 @@ var_to_keep <- readRDS("Variaveis/Variaveis_para_manter.rds")
 v <- variaveis[[var_to_keep]]
 
 # Extrair valores para os pontos
-occ_var <- extract(v, pts, xy = TRUE, na.rm = TRUE) #Originais
-occ_10km_var <- extract(v, pts_10km, xy = TRUE, na.rm = TRUE) #Fltrados com distancia de 10km
+occ_var <- terra::extract(v, pts, xy = TRUE, na.rm = TRUE) #Originais
+occ_10km_var <- terra::extract(v, pts_10km, xy = TRUE, na.rm = TRUE) #Fltrados com distancia de 10km
 
 # Calcular I de Moran com moranfast para variável bio_6
 imoran_original <- moranfast(occ_var$bio_6, occ_var$x, occ_var$y)
@@ -127,7 +133,7 @@ moran_tests <- filter_geo_moran(occ = occ,
                                 species = "species",
                                 long = "decimalLongitude",
                                 lat = "decimalLatitude",
-                                d = c(0, 2.5, 5, 10, 15, 20, 25, 30, 50, 100),
+                                d = seq(0, 30, 2), #de 0 a 30km, de 2 em 2
                                 variables = v)
 moran_tests$Distance
 View(moran_tests$imoran)
@@ -147,3 +153,7 @@ mapview(mapa_calor_moran, col.regions = rev(pals::brewer.spectral(7))) +
 # Lembrando: isso não é um modelo de distribuição ou de nicho!
 
 # Filtrar pontos é importante para que consigamos capturar a preferência da espécie, e não a preferência de quem estuda a espécie (e coleta em lugares mais acessíveis e conhecidos)
+
+# Vamos salvar essas ocorrencias filtradas (thinned)
+fwrite(moran_tests$occ,
+       file.path(sp_dir, "5-Ocorrencias_baixa_autocorrelacao_espacial.gz"))

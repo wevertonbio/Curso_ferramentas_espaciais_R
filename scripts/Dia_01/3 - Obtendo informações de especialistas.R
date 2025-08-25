@@ -162,7 +162,7 @@ mapview(araucaria_dist$`Araucaria angustifolia`$states_biomes,
           col.regions = "firebrick")
 
 # Vamos plotar os pontos de Araucaria
-occ <- fread("Ocorrencias/Araucaria angustifolia/Ocorrencias_final.gz")
+occ <- fread("Ocorrencias/Araucaria angustifolia/1-Ocorrencias.gz")
 # Espacializar
 pts <- vect(occ, geom = c(x = "decimalLongitude",
                           y = "decimalLatitude"),

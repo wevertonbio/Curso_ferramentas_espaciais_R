@@ -15,7 +15,7 @@ sp_dir <- file.path("Ocorrencias/", sp)
 sp_dir
 
 # Importar registros
-occ <- fread(file.path(sp_dir, "Ocorrencias_final.gz"))
+occ <- fread(file.path(sp_dir, "1-Ocorrencias.gz"))
 
 #Espacializar pontos
 pts <- vect(occ, geom = c(x = "decimalLongitude", #Converte pontos para spatvector
@@ -67,7 +67,7 @@ occ <- occ %>%
   mutate(species = get_binomial(scientificName, #Criar coluna species
                                 include_subspecies = FALSE, #Não incluir subespecie
                                 include_variety = FALSE), #Não incluir variedade
-         .before = 1) #Posicionar coluna antes da primeira
+         .before = scientificName) #Posicionar coluna antes dessa coluna
 # Checar nomes
 unique(occ$species)
 
@@ -127,6 +127,27 @@ nrow(occ_florabr$cleaned)
 # Vamos usar esses registros como nosso novo conjunto de ocorrências
 new_occ <- occ_florabr$cleaned
 
+# Dica: salve os registros removidos. Talvez, você precise consultá-los no futuro
+# Ao invés de salvar a tabela (que pode ocupar muito espaço), salve o ID do registro removido
+# Por exemplo, vamos criar uma pasta chamada "Removidos"
+dir.create(file.path(sp_dir, "Removidos"))
+# Agora, vamos criar uma lista, com o caminho do arquivo original e os indices removidos
+arquivo_original <- file.path(sp_dir, "1-Ocorrencias.gz")
+id_removidos_flora <- occ_florabr$flagged %>%
+  filter(!filters_ok) %>% #selecionar apenas registros não ok (! indica falso)
+  pull(ID) #Pegar valores da coluna ID
+# Salvar numa lista
+removidos_flora <- list("arquivo_original" = arquivo_original,
+                        "removidos_florabr" = id_removidos_flora)
+
+# Depois, se quiser ver quais foram removidos, basta usar essa informação
+df_original <- fread(removidos_flora$arquivo_original)
+df_removidos <- df_original %>%
+  filter(ID %in% removidos_flora$removidos_florabr)
+
+#Salvar lista com arquivo original e index removidos
+saveRDS(removidos_flora, file.path(sp_dir, "Removidos", "2-removidos_flora"))
+
 # E os registros fora do Brasil?
 
 # Podemos utilizar informações do WCVP!
@@ -178,15 +199,27 @@ mapview(pts_wcvp, zcol = "natural_range_wcvp",
   mapview(occ_wcvp[[sp]]$map, layer.name = "Natural range")
 
 #Remover registros fora de distribuição natural
-occ_wcvp <- occ_wcvp$`Araucaria angustifolia`$flagged %>%
+occ_wcvp_filtered <- occ_wcvp$`Araucaria angustifolia`$flagged %>%
   filter(natural_range_wcvp == TRUE)
 
 nrow(occ) #Numero de registros obtidos do GBIF
 nrow(new_occ) #Numero de registros após filtrar com florabr
-nrow(occ_wcvp) #Numero de registros após filtrar com wcvp
+nrow(occ_wcvp_filtered) #Numero de registros após filtrar com wcvp
+
 
 # Poderíamos implementar o mesmo procedimento com poligonos de outras fontes, como da IUCN, usando a função is.related() para identificar pontos que caem fora do polígono
 
 # Salvar registros
-fwrite(occ_wcvp,
-       file.path(sp_dir, "Ocorrencias_filtered.gz"))
+fwrite(occ_wcvp_filtered,
+       file.path(sp_dir, "2-Ocorrencias_especialistas.gz"))
+
+# Vamos adicionar os IDs removidos pelo WCVP ao removidos_flora
+id_removidos_wcvp <- occ_wcvp$`Araucaria angustifolia`$flagged %>%
+  filter(natural_range_wcvp == FALSE) %>% pull(ID)
+id_removidos_wcvp
+
+removidos_flora[["removidos_WCVP"]] <- id_removidos_wcvp
+removidos_flora
+
+#Salvar lista com arquivo original e index removidos
+saveRDS(removidos_flora, file.path(sp_dir, "Removidos", "2-removidos_flora"))

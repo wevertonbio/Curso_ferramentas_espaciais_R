@@ -18,7 +18,7 @@ plot(image, axes = F) #Plotar imagem
 library(red)
 
 # Importar registros de ocorrência filtrados
-occ <- fread("Ocorrencias/Araucaria angustifolia/Ocorrencias_cleaned.gz")
+occ <- fread("Ocorrencias/Araucaria angustifolia/3-Ocorrencias_CoordinateCleaner.gz")
 
 # Calcular EOO com pacote red
 eoo_red <- eoo(occ[, c("decimalLongitude", "decimalLatitude")])
@@ -273,7 +273,7 @@ par_pa <- vect("Data/PAs/Paraguay.gpkg")
 #Unir PAs (basta colocar dentro de uma lista e usar vect)
 pas <- vect(list(br_pa, arg_pa, uru_pa, par_pa))
 # plot(pas) #Pode demorar um pouco...
-# Vamos simplificar as geometrias
+# Vamos simplificar as geometrias (deixar menos complexas)
 pas_simples <- simplifyGeom(pas)
 plot(pas_simples)
 

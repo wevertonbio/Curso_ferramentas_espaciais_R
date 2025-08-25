@@ -90,7 +90,7 @@ fwrite(eco_ext, "Data/My_data/Ecoregions_variables.gzip")
 #### Extrair variáveis para pontos de ocorrência ####
 
 # Importar registros de ocorrência
-occ <- fread("Ocorrencias/Araucaria angustifolia/Ocorrencias_cleaned.gz")
+occ <- fread("Ocorrencias/Araucaria angustifolia/3-Ocorrencias_CoordinateCleaner.gz")
 
 # Espacializar e plotar
 pts <- vect(occ, geom = c(x = "decimalLongitude", y = "decimalLatitude"),

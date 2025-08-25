@@ -349,15 +349,22 @@ db_fixed <- fix_columns(data = occ_digbio,
 
 # Unir dados
 occ_final <- rbindlist(list(gbif_fixed, splink_fixed, db_fixed))
+
+# Vamos criar uma coluna chamada ID, para identificar os registros
+occ_final <- occ_final %>%
+  mutate(ID = 1:nrow(occ_final),
+         .before = 1) #Colocar como primeira coluna
+head(occ_final)
+
 # Salvar dados
-fwrite(occ_final, file.path(sp_dir, "Ocorrencias_final.gz"))
+fwrite(occ_final, file.path(sp_dir, "1-Ocorrencias.gz"))
 
 # Espacializar
-occ_final2 <- vect(occ_final, geom = c(x = "decimalLongitude",
+pts_final <- vect(occ_final, geom = c(x = "decimalLongitude",
                                        y = "decimalLatitude"),
                    crs = "epsg:4326")
 # Plot interativo
-mapview(occ_final2,
+mapview(pts_final,
         zcol = "data_source", # Uma cor para cada data_source
         burst = TRUE) #Tratar cada zcol como uma camada individual
 

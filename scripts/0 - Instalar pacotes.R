@@ -38,4 +38,6 @@ if(!require("rWCVPdata")){
 if(!require("moranfast")){
   remotes::install_github("mcooper/moranfast")
 }
-
+if(!require("flexsdm")){
+  remotes::install_github("sjevelazco/flexsdm")
+}
